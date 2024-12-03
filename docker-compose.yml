@@ -1,0 +1,71 @@
+version: "3"
+services:
+  zookeeper:
+    image: bitnami/zookeeper:latest
+    container_name: my-zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+  kafka:
+    image: bitnami/kafka:latest
+    container_name: my-kafka
+    ports:
+      - "9092:9092"
+    volumes:
+      - "kafka_data:/bitnami"
+    environment:
+      - KAFKA_BROKER_ID=1
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://192.168.49.1:9092
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - BITNAMI_DEBUG=true
+    depends_on:
+      - zookeeper
+
+  metabase:
+    image: metabase/metabase
+    container_name: metabase
+    ports:
+      - 3001:3000
+
+  db:
+    image: mongo:latest
+    hostname: mongo-db
+    container_name: mongodb
+    volumes:
+      - mongodb_data:/var/lib/db
+    ports:
+      - "27017:27017"
+    restart: unless-stopped
+
+  kafcon:
+    depends_on:
+      - kafka
+    image: confluentinc/cp-kafka-connect-base
+    container_name: my-kafka-connector
+    environment:
+      - CONNECT_BOOTSTRAP_SERVERS=192.168.49.1:9092
+      - CONNECT_GROUP_ID=quickstart
+      - CONNECT_CONFIG_STORAGE_TOPIC=quickstart-config
+      - CONNECT_OFFSET_STORAGE_TOPIC=quickstart-offsets
+      - CONNECT_STATUS_STORAGE_TOPIC=quickstart-status
+      - CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR=1
+      - CONNECT_STATUS_STORAGE_REPLICATION_FACTOR=1
+      - CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR=1
+      - CONNECT_KEY_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+      - CONNECT_VALUE_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+      - CONNECT_INTERNAL_KEY_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+      - CONNECT_INTERNAL_VALUE_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+      - CONNECT_REST_ADVERTISED_HOST_NAME=localhost
+      - CONNECT_PLUGIN_PATH=/usr/share/java,/data/mongodb-kafka-connect/
+    ports:
+      - 8083:8083
+    volumes:
+      - /tmp/custom/jars:/data
+
+volumes:
+  mongodb_data:
+    driver: local
+  kafka_data:
+    driver: local

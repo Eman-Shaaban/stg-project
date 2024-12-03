@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: server-deployment
+spec:
+  selector:
+    matchLabels:
+      app: server-app
+  template:
+    metadata:
+      name: server-pod
+      labels:
+        app: server-app
+    spec:
+      containers:
+        - name: server-app
+          image: emansha3ban/streaming-server
+          resources:
+            requests:
+              cpu: 30m
+            limits:
+              cpu: 40m
+          env:
+          - name: KAFKA_URI
+            value: "192.168.49.1:9092"
+          - name: KAFKA_SERVER_TOPIC
+            value: "server-events"    
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: server-service
+spec:
+  type: NodePort
+  selector:
+    app: server-app
+  ports:
+    - port: 5000
+      targetPort: 5000
+      nodePort: 30005
